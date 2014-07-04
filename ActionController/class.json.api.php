@@ -13,12 +13,12 @@ class JSON_API extends Action_Controller {
                 header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');
             }
             
-            header('Content-Type: application/json');
+            header('Content-Type: application/json; charset=utf-8');
         }
         return $this;
     }
     
-    protected function rander() {
+    protected function render() {
         $output = array( 'code' => $this->code );
         $output['status'] = isset(self::$statuses[$this->code]) ? self::$statuses[$this->code] : 'Undefined';
         $this->response and $output['response'] = $this->response;
