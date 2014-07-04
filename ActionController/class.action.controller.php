@@ -69,7 +69,7 @@ class Action_Controller {
 
     /**
      * @var array  HTTP 狀態
-     */    
+     */
     public static $statuses = array(
 		200 => 'OK',
 		
@@ -88,30 +88,29 @@ class Action_Controller {
 	);
     
     /**
-     * 從PATH_INFO取得請求路徑
+     * @var array  單例容器
      */
-    final public function __construct() {        
-        $this->path = 
-            (isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] :
-            (isset($_SERVER['ORIG_PATH_INFO']) ?
-            # 修正微軟IIS ORIG_PATH_INFO包含腳本名稱
-                str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['ORIG_PATH_INFO']) :
-            (strpos($_SERVER['REQUEST_URI'], $_SERVER['SCRIPT_NAME']) === 0 ? 
-                str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['REQUEST_URI']) :
-                $_SERVER['REQUEST_URI']
-            )));
-        
-        $this->segment = explode('/', trim($this->path, '/'));
-        $this->method = strtolower($_SERVER['REQUEST_METHOD']);
-        $this->router();
-        $this->init();
+    private static $instances = array();
+    
+    /**
+     * 單例
+     *
+     * @return  $instances  單例實體
+     */
+    final public static function ins() {
+        $class = get_called_class();
+        if (!isset(self::$instances[$class])) {
+            self::$instances[$class] = new $class();
+        }
+        return self::$instances[$class];
     }
     
     /**
      * 呼叫預設動作並輸出
      */
-    final public function execute() {
-        $this->call($this->action, $this->params, $this->method);
+    final public static function execute() {
+        self::ins()->call(self::ins()->action, self::ins()->params, self::ins()->method);
+        // $this->call($this->action, $this->params, $this->method);
     }
     
     /**
@@ -121,8 +120,8 @@ class Action_Controller {
      * @param   array   $params  參數
      * @param   string  $method  HTTP請求方法 (GET|POST)
      */
-    final public function call($action='', array $params=array(), $method='get') {
-        echo $this->invoke($action, $params, $method)->send_headers()->render();
+    final public static function call($action='', array $params=array(), $method='get') {
+        echo self::ins()->invoke($action, $params, $method)->send_headers()->render();
     }
 
     /**
@@ -133,17 +132,35 @@ class Action_Controller {
      * @param   string  $method  HTTP請求方法 (GET|POST)
      * @return  $response  回應內容
      */
-    final public function fetch($action='', array $params=array(), $method='get') {
-        return $this->invoke($action, $params, $method)->render();
+    final public static function fetch($action='', array $params=array(), $method='get') {
+        return self::ins()->invoke($action, $params, $method)->render();
+    }
+    
+    /**
+     * 從PATH_INFO取得請求路徑
+     */    
+    final private function __construct() {        
+        $this->path = 
+            (isset($_SERVER['PATH_INFO']) ? $_SERVER['PATH_INFO'] :
+            (isset($_SERVER['ORIG_PATH_INFO']) ?
+                # 修正微軟IIS ORIG_PATH_INFO包含腳本名稱
+                str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['ORIG_PATH_INFO']) :
+            (strpos($_SERVER['REQUEST_URI'], $_SERVER['SCRIPT_NAME']) === 0 ? 
+                str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['REQUEST_URI']) :
+                $_SERVER['REQUEST_URI']
+            )));
+        
+        $this->segment = explode('/', trim($this->path, '/'));
+        $this->method = strtolower($_SERVER['REQUEST_METHOD']);
+        $this->init();
+        $this->router();
     }
     
     /**
      * 初始化
      * 由於建構式禁止重載，可重載此函式，建構式會呼叫此函式進行初始化
      */
-    public function init() {
-        
-    }
+    protected function init() {}
 
     /**
      * 路由
@@ -209,7 +226,7 @@ class Action_Controller {
                 header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');
             }
             
-            header("Content-Type:text/html; charset=utf-8");
+            header('Content-Type:text/html; charset=utf-8');
         }
         return $this;
     }
@@ -234,3 +251,15 @@ class Action_Controller {
     }
 }
 
+if (!function_exists('get_called_class')) {
+    function get_called_class() {
+        $bt = debug_backtrace();
+        $lines = file($bt[1]['file']);
+        preg_match(
+            '/([a-zA-Z0-9\_]+)::'.$bt[1]['function'].'/',
+            $lines[$bt[1]['line']-1],
+            $matches
+        );
+        return $matches[1];
+    }
+}
