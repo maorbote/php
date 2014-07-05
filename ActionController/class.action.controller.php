@@ -97,8 +97,8 @@ class Action_Controller {
      *
      * @return  $instances  單例實體
      */
-    final public static function ins() {
-        $class = get_called_class();
+    private static function ins() {
+        $class = self::get_called_class();
         if (!isset(self::$instances[$class])) {
             self::$instances[$class] = new $class();
         }
@@ -109,8 +109,8 @@ class Action_Controller {
      * 呼叫預設動作並輸出
      */
     final public static function execute() {
-        self::ins()->call(self::ins()->action, self::ins()->params, self::ins()->method);
-        // $this->call($this->action, $this->params, $this->method);
+    	$ins = self::ins();
+        echo $ins->invoke($ins->action, $ins->params, $ins->method)->send_headers()->render();
     }
     
     /**
@@ -249,17 +249,27 @@ class Action_Controller {
         $this->code = 404;
         return "404 Not Found!";
     }
+    
+    /**
+     * get_called_class 5.2相容
+     * 
+     * @return  $className  類名稱
+     */
+    private static function get_called_class() {
+    	if (function_exists('get_called_class')) {
+    		return get_called_class();
+    	} else {
+	        $bt = debug_backtrace();
+	        $bt = $bt[2];
+	        $lines = file($bt['file']);
+	        preg_match(
+	            '/(\w+)::'.$bt['function'].'/',
+	            $lines[$bt['line']-1],
+	            $matches
+	        );
+	        return $matches[1];
+    	}
+    }
+    
 }
 
-if (!function_exists('get_called_class')) {
-    function get_called_class() {
-        $bt = debug_backtrace();
-        $lines = file($bt[1]['file']);
-        preg_match(
-            '/([a-zA-Z0-9\_]+)::'.$bt[1]['function'].'/',
-            $lines[$bt[1]['line']-1],
-            $matches
-        );
-        return $matches[1];
-    }
-}
