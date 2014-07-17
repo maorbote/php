@@ -28,6 +28,11 @@ class Action_Controller {
     protected $code = 200;
 
     /**
+     * @var array  HTTP 標頭
+     */
+    protected $headers = array('Content-Type' => 'text/html; charset=utf-8');
+
+    /**
      * @var staring  回應的內容
      */
     protected $response;
@@ -71,21 +76,21 @@ class Action_Controller {
      * @var array  HTTP 狀態
      */
     public static $statuses = array(
-		200 => 'OK',
-		
-		400 => 'Bad Request',
-		401 => 'Unauthorized',
-		403 => 'Forbidden',
-		404 => 'Not Found',
-		405 => 'Method Not Allowed',
-		408 => 'Request Timeout',
+        200 => 'OK',
 
-		500 => 'Internal Server Error',
-		501 => 'Not Implemented',
-		502 => 'Bad Gateway',
-		503 => 'Service Unavailable',
-		504 => 'Gateway Timeout'
-	);
+        400 => 'Bad Request',
+        401 => 'Unauthorized',
+        403 => 'Forbidden',
+        404 => 'Not Found',
+        405 => 'Method Not Allowed',
+        408 => 'Request Timeout',
+
+        500 => 'Internal Server Error',
+        501 => 'Not Implemented',
+        502 => 'Bad Gateway',
+        503 => 'Service Unavailable',
+        504 => 'Gateway Timeout'
+    );
     
     /**
      * @var array  單例容器
@@ -109,7 +114,7 @@ class Action_Controller {
      * 呼叫預設動作並輸出
      */
     final public static function execute() {
-    	$ins = self::ins();
+        $ins = self::ins();
         echo $ins->invoke($ins->action, $ins->params, $ins->method)->send_headers()->render();
     }
     
@@ -137,6 +142,7 @@ class Action_Controller {
     }
     
     /**
+     * 建構式:禁止重載
      * 從PATH_INFO取得請求路徑
      */    
     final private function __construct() {        
@@ -192,7 +198,7 @@ class Action_Controller {
         $callback = 
             (method_exists($this, $method.'_'.$action) ? $method.'_'.$action :
             (method_exists($this, 'action_'.$action) ? 'action_'.$action :
-            'not_found'));
+            'not_implemented'));
         
         $this->before();
         $this->response = call_user_func_array(array($this, $callback), $params);
@@ -226,7 +232,10 @@ class Action_Controller {
                 header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');
             }
             
-            header('Content-Type:text/html; charset=utf-8');
+            foreach ($this->headers as $name => $value) {
+                is_string($name) and strlen($name) and header("$name: $value");
+            }
+
         }
         return $this;
     }
@@ -245,9 +254,9 @@ class Action_Controller {
         return "501 Method(".$this->action.") Not Implemented!";
     }
     
-    protected function not_found() {
+    protected function not_found($msg='404 Not Found!') {
         $this->code = 404;
-        return "404 Not Found!";
+        return $msg;
     }
     
     /**
@@ -256,19 +265,19 @@ class Action_Controller {
      * @return  $className  類名稱
      */
     private static function get_called_class() {
-    	if (function_exists('get_called_class')) {
-    		return get_called_class();
-    	} else {
-	        $bt = debug_backtrace();
-	        $bt = $bt[2];
-	        $lines = file($bt['file']);
-	        preg_match(
-	            '/(\w+)::'.$bt['function'].'/',
-	            $lines[$bt['line']-1],
-	            $matches
-	        );
-	        return $matches[1];
-    	}
+        if (function_exists('get_called_class')) {
+            return get_called_class();
+        } else {
+            $bt = debug_backtrace();
+            $bt = $bt[2];
+            $lines = file($bt['file']);
+            preg_match(
+                '/(\w+)::'.$bt['function'].'/',
+                $lines[$bt['line']-1],
+                $matches
+            );
+            return $matches[1];
+        }
     }
     
 }

@@ -3,20 +3,8 @@
 class JSON_API extends Action_Controller {
     
     protected $show_error = true;
-    
-    protected function send_headers() {
-        if ( ! headers_sent()) {            
-            
-            if(isset(self::$statuses[$this->code])) {
-                header($_SERVER['SERVER_PROTOCOL'] . ' ' . $this->code.' '.self::$statuses[$this->code]);
-            } else {
-                header($_SERVER['SERVER_PROTOCOL'] . ' 200 OK');
-            }
-            
-            header('Content-Type: application/json; charset=utf-8');
-        }
-        return $this;
-    }
+
+    protected $headers = array('Content-Type' => 'application/json; charset=utf-8');
     
     protected function render() {
         $output = array( 'code' => $this->code );
