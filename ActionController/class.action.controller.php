@@ -105,7 +105,7 @@ class Action_Controller {
     private static function ins() {
         $class = self::get_called_class();
         if (!isset(self::$instances[$class])) {
-            self::$instances[$class] = new $class();
+            self::$instances[$class] = new $class;
         }
         return self::$instances[$class];
     }
@@ -152,8 +152,8 @@ class Action_Controller {
                 # 修正微軟IIS ORIG_PATH_INFO包含腳本名稱
                 str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['ORIG_PATH_INFO']) :
             (strpos($_SERVER['REQUEST_URI'], $_SERVER['SCRIPT_NAME']) === 0 ? 
-                str_replace($_SERVER['SCRIPT_NAME'], '', $_SERVER['REQUEST_URI']) :
-                $_SERVER['REQUEST_URI']
+                str_replace($_SERVER['SCRIPT_NAME'], '', strtok($_SERVER['REQUEST_URI'], '?')) :
+                strtok($_SERVER['REQUEST_URI'], '?')
             )));
         
         $this->segment = explode('/', trim($this->path, '/'));
@@ -194,6 +194,13 @@ class Action_Controller {
      */
     protected function invoke($action='', array $params=array(), $method='get') {
         if(empty($action)) $action = $this->action ? $this->action : 'index' ;
+        
+        if(method_exists($this, 'route_'.$action)) {
+            $route = $action;
+            $action = array_shift($params);
+            call_user_func(array($this, 'route_'.$route), $action, $params, $method);
+            exit;
+        }
         
         $callback = 
             (method_exists($this, $method.'_'.$action) ? $method.'_'.$action :
@@ -246,7 +253,7 @@ class Action_Controller {
      * @return  $response  回應內容
      */
     protected function render() {
-        return $this->response;
+        return $this->response.($this->show_error ? $this->runtime_output : '');
     }
     
     protected function not_implemented() {
